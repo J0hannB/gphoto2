@@ -1219,6 +1219,14 @@ action_camera_wait_event (GPParams *p, enum download_type downloadtype, const ch
 					return (ret);
 				}
 			}
+
+			if(downloadtype == DT_THUMBNAIL){
+				ret = get_file_common (fn->name, GP_FILE_TYPE_PREVIEW);
+			}
+			else{
+				ret = get_file_common (fn->name, GP_FILE_TYPE_NORMAL);
+			}	
+
 			ret = get_file_common (fn->name, GP_FILE_TYPE_NORMAL);
 			if (ret != GP_OK) {
 				cli_error_print (_("Could not get image."));

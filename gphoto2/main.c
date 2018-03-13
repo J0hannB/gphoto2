@@ -1292,6 +1292,7 @@ typedef enum {
 	ARG_SHOW_PREVIEW,
 	ARG_CAPTURE_SOUND,
 	ARG_CAPTURE_TETHERED,
+	ARG_CAPTURE_TETHERED_PREV,
 	ARG_CONFIG,
 	ARG_DEBUG,
 	ARG_DEBUG_LOGLEVEL,
@@ -1816,6 +1817,9 @@ cb_arg_run (poptContext __unused__ ctx,
 	case ARG_CAPTURE_TETHERED:
 		params->p.r = action_camera_wait_event (&gp_params, DT_DOWNLOAD, arg);
 		break;
+	case ARG_CAPTURE_TETHERED_PREV:
+		params->p.r = action_camera_wait_event (&gp_params, DT_THUMBNAIL, arg);
+		break;
 	case ARG_STORAGE_INFO:
 		params->p.r = print_storage_info (&gp_params);
 		break;
@@ -2067,6 +2071,8 @@ main (int argc, char **argv, char **envp)
 		 ARG_CAPTURE_SOUND, N_("Capture an audio clip"), NULL},
 		{"capture-tethered", '\0', POPT_ARG_STRING|POPT_ARGFLAG_OPTIONAL, NULL,
 		 ARG_CAPTURE_TETHERED, N_("Wait for shutter release on the camera and download"), N_("COUNT, SECONDS, MILLISECONDS or MATCHSTRING")},
+		{"capture-tethered-prev", '\0', POPT_ARG_STRING|POPT_ARGFLAG_OPTIONAL, NULL,
+		 ARG_CAPTURE_TETHERED_PREV, N_("Wait for shutter release on the camera and download thumbnail"), N_("COUNT, SECONDS, MILLISECONDS or MATCHSTRING")}, 
 		POPT_TABLEEND
 	};
 	const struct poptOption fileOptions[] = {
@@ -2297,6 +2303,7 @@ main (int argc, char **argv, char **envp)
 	CHECK_OPT (ARG_SHOW_PREVIEW);
 	CHECK_OPT (ARG_CAPTURE_SOUND);
 	CHECK_OPT (ARG_CAPTURE_TETHERED);
+	CHECK_OPT (ARG_CAPTURE_TETHERED_PREV); 
 	CHECK_OPT (ARG_CONFIG);
 	CHECK_OPT (ARG_DELETE_ALL_FILES);
 	CHECK_OPT (ARG_DELETE_FILE);

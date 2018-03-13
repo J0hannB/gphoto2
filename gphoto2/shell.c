@@ -96,6 +96,7 @@ static int shell_set_config_index    (Camera *, const char *);
 static int shell_set_config_value    (Camera *, const char *);
 static int shell_capture_image (Camera *, const char *);
 static int shell_capture_tethered (Camera *, const char *);
+static int shell_capture_tethered_prev(Camera *, const char *); 
 static int shell_capture_image_and_download (Camera *, const char *);
 static int shell_capture_preview (Camera *, const char *);
 static int shell_mkdir         (Camera *, const char *);
@@ -152,6 +153,7 @@ static const struct _ShellFunctionTable {
 	{"capture-preview", shell_capture_preview, N_("Capture a preview image"), NULL, 0},
 	{"wait-event", shell_wait_event, N_("Wait for an event"), N_("count or seconds"), 0},
 	{"capture-tethered", shell_capture_tethered, N_("Wait for images to be captured and download it"), N_("count or seconds"), 0},
+	{"capture-tethered-prev", shell_capture_tethered_prev, N_("Wait for images to be captured and download thumbnails"), N_("count or seconds"), 0}, 
 	{"wait-event-and-download", shell_capture_tethered, N_("Wait for events and images to be captured and download it"), N_("count or seconds"), 0},
 	{"q", shell_exit, N_("Exit the gPhoto shell"), NULL, 0},
 	{"quit", shell_exit, N_("Exit the gPhoto shell"), NULL, 0},
@@ -928,6 +930,11 @@ shell_capture_tethered (Camera *camera, const char *args) {
 
 	shell_arg (args, 0, argument);
 	return action_camera_wait_event (p, DT_DOWNLOAD, argument);
+}
+
+static int
+shell_capture_tethered_prev (Camera *camera, const char *args) {
+	return action_camera_wait_event (p, DT_THUMBNAIL, args);
 }
 
 

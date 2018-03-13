@@ -32,7 +32,7 @@ enum wait_type {
 	WAIT_FRAMES,
 	WAIT_STRING,
 };
-enum download_type { DT_NO_DOWNLOAD, DT_DOWNLOAD };
+enum download_type { DT_NO_DOWNLOAD, DT_DOWNLOAD, DT_THUMBNAIL };
 struct waitparams {
 	union {
 		int milliseconds;
