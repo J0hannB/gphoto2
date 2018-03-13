@@ -18,10 +18,12 @@
  * Boston, MA  02110-1301  USA
  */
 
+
+/*
+ * This software was modified by Jonathan Baurer for use by Airscout inc. 2017
+ */
+
 #include "config.h"
-#if defined (HAVE_SIGNAL_H)
-#include <signal.h>
-#endif
 #include "actions.h"
 #include "foreach.h"
 #include <gphoto2/gphoto2-port-info-list.h>
@@ -448,8 +450,7 @@ save_camera_file_to_file (
 		unlink(s);
 		if (-1 == rename (curname, s)) {
 			/* happens if the user specified a absolute path with --filename */
-			/* EPERM happens on windows, see https://github.com/gphoto/libgphoto2/issues/97 */
-			if ((errno == EXDEV) || (errno == EPERM)) {
+			if (errno == EXDEV) {
 				char buf[8192];
 				int in_fd, out_fd;
 
@@ -1041,8 +1042,6 @@ capture_generic (CameraCaptureType type, const char __unused__ *name, int downlo
 					(result == GP_ERROR_CANCEL)		||
 					(result == GP_ERROR_NO_SPACE)		||
 					(result == GP_ERROR_IO_USB_CLAIM)	||
-					(result == GP_ERROR_IO_LOCK)		||
-					(result == GP_ERROR_CAMERA_BUSY)	||
 					(result == GP_ERROR_OS_FAILURE)
 				)
 					return (result);
@@ -1107,7 +1106,7 @@ capture_generic (CameraCaptureType type, const char __unused__ *name, int downlo
 				 */
 				do {
 					next_pic_time.tv_sec += glob_interval;
-				} while (glob_interval && (timediff_now (&next_pic_time) < 0));
+				} while (timediff_now (&next_pic_time) < 0);
 			}
 			capture_now = 0;
 		} else {
@@ -1292,6 +1291,7 @@ typedef enum {
 	ARG_SHOW_PREVIEW,
 	ARG_CAPTURE_SOUND,
 	ARG_CAPTURE_TETHERED,
+	ARG_CAPTURE_TETHERED_PREV, //@jonathan added
 	ARG_CONFIG,
 	ARG_DEBUG,
 	ARG_DEBUG_LOGLEVEL,
@@ -1546,6 +1546,7 @@ cb_arg_init (poptContext __unused__ ctx,
 	case ARG_VERSION:
 		params->p.r = print_version_action (&gp_params);
 		break;
+
 	default:
 		break;
 	}
@@ -1816,6 +1817,10 @@ cb_arg_run (poptContext __unused__ ctx,
 	case ARG_CAPTURE_TETHERED:
 		params->p.r = action_camera_wait_event (&gp_params, DT_DOWNLOAD, arg);
 		break;
+	//@jonathan added this case statement
+	case ARG_CAPTURE_TETHERED_PREV:
+		params->p.r = action_camera_wait_event (&gp_params, DT_THUMBNAIL, arg);
+		break;
 	case ARG_STORAGE_INFO:
 		params->p.r = print_storage_info (&gp_params);
 		break;
@@ -2067,6 +2072,10 @@ main (int argc, char **argv, char **envp)
 		 ARG_CAPTURE_SOUND, N_("Capture an audio clip"), NULL},
 		{"capture-tethered", '\0', POPT_ARG_STRING|POPT_ARGFLAG_OPTIONAL, NULL,
 		 ARG_CAPTURE_TETHERED, N_("Wait for shutter release on the camera and download"), N_("COUNT, SECONDS, MILLISECONDS or MATCHSTRING")},
+		{"capture-tethered-prev", '\0', POPT_ARG_STRING|POPT_ARGFLAG_OPTIONAL, NULL,
+		 ARG_CAPTURE_TETHERED_PREV, N_("Wait for shutter release on the camera and download thumbnail"), N_("COUNT, SECONDS, MILLISECONDS or MATCHSTRING")}, //@jonathan added
+		{"trigger-capture", '\0', POPT_ARG_NONE, NULL,
+		 ARG_TRIGGER_CAPTURE, N_("Trigger image capture"), NULL},
 		POPT_TABLEEND
 	};
 	const struct poptOption fileOptions[] = {
@@ -2297,6 +2306,7 @@ main (int argc, char **argv, char **envp)
 	CHECK_OPT (ARG_SHOW_PREVIEW);
 	CHECK_OPT (ARG_CAPTURE_SOUND);
 	CHECK_OPT (ARG_CAPTURE_TETHERED);
+	CHECK_OPT (ARG_CAPTURE_TETHERED_PREV); //@jonathan added
 	CHECK_OPT (ARG_CONFIG);
 	CHECK_OPT (ARG_DELETE_ALL_FILES);
 	CHECK_OPT (ARG_DELETE_FILE);

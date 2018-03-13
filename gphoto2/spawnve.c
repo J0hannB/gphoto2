@@ -17,14 +17,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#include <config.h>
 
-/* Just in case spawnve is in the RTL */
-#ifndef HAVE_SPAWNVE
 #include <sys/types.h>
-#if defined(HAVE_SYS_WAIT_H)
 #include <sys/wait.h>
-#endif
 #include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
@@ -83,4 +78,3 @@ spawnve(const char *filename, char *const argv[], char *const envp[])
     return(-1);
   }
 }
-#endif /* HAVE_SPAWNVE */

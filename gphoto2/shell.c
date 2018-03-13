@@ -18,6 +18,11 @@
  * Boston, MA  02110-1301  USA
  */
 
+
+/*
+ * This software was modified by Jonathan Baurer for use by Airscout inc. 2017
+ */
+
 #include "config.h"
 #include "actions.h"
 #include "globals.h"
@@ -96,6 +101,7 @@ static int shell_set_config_index    (Camera *, const char *);
 static int shell_set_config_value    (Camera *, const char *);
 static int shell_capture_image (Camera *, const char *);
 static int shell_capture_tethered (Camera *, const char *);
+static int shell_capture_tethered_prev(Camera *, const char *); //@jonathan added
 static int shell_capture_image_and_download (Camera *, const char *);
 static int shell_capture_preview (Camera *, const char *);
 static int shell_mkdir         (Camera *, const char *);
@@ -121,7 +127,7 @@ static const struct _ShellFunctionTable {
 	{"cd", shell_cd, N_("Change to a directory on the camera"),
 	 N_("directory"), 1},
 	{"lcd", shell_lcd, N_("Change to a directory on the local drive"),
-	 N_("directory"), 0},
+	 N_("directory"), 1},
 	{"exit", shell_exit, N_("Exit the gPhoto shell"), NULL, 0},
 	{"get", shell_get, N_("Download a file"), N_("[directory/]filename"), 1},
 	{"put", shell_put, N_("Upload a file"), N_("[directory/]filename"), 1},
@@ -152,6 +158,7 @@ static const struct _ShellFunctionTable {
 	{"capture-preview", shell_capture_preview, N_("Capture a preview image"), NULL, 0},
 	{"wait-event", shell_wait_event, N_("Wait for an event"), N_("count or seconds"), 0},
 	{"capture-tethered", shell_capture_tethered, N_("Wait for images to be captured and download it"), N_("count or seconds"), 0},
+	{"capture-tethered-prev", shell_capture_tethered_prev, N_("Wait for images to be captured and download thumbnails"), N_("count or seconds"), 0}, //@jonathan added
 	{"wait-event-and-download", shell_capture_tethered, N_("Wait for events and images to be captured and download it"), N_("count or seconds"), 0},
 	{"q", shell_exit, N_("Exit the gPhoto shell"), NULL, 0},
 	{"quit", shell_exit, N_("Exit the gPhoto shell"), NULL, 0},
@@ -613,7 +620,7 @@ shell_cd (Camera __unused__ *camera, const char *arg)
 	int arg_count = shell_arg_count (arg);
 
 	if (!arg_count)
-		return GP_OK;
+		return (GP_OK);
 
 	/* shell_arg(arg, 0, arg_dir); */
 
@@ -916,18 +923,18 @@ shell_capture_preview (Camera __unused__ *camera, const char __unused__ *args) {
 
 static int
 shell_wait_event (Camera *camera, const char *args) {
-	char argument[1024];
-
-	shell_arg (args, 0, argument);
-	return action_camera_wait_event (p, DT_NO_DOWNLOAD, argument);
+	return action_camera_wait_event (p, DT_NO_DOWNLOAD, args);
 }
 
 static int
 shell_capture_tethered (Camera *camera, const char *args) {
-	char argument[1024];
+	return action_camera_wait_event (p, DT_DOWNLOAD, args);
+}
 
-	shell_arg (args, 0, argument);
-	return action_camera_wait_event (p, DT_DOWNLOAD, argument);
+//@jonathan added
+static int
+shell_capture_tethered_prev (Camera *camera, const char *args) {
+	return action_camera_wait_event (p, DT_THUMBNAIL, args);
 }
 
 
