@@ -1,6 +1,7 @@
 /* actions.c
  *
  * Copyright 2002 Lutz Mueller <lutz@users.sourceforge.net>
+ * Copyright 2016 Marcus Meissner <marcus@jet.franken.de>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,11 +17,6 @@
  * License along with this library; if not, write to the
  * Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA  02110-1301  USA
- */
-
-
-/*
- * This software was modified by Jonathan Baurer for use by Airscout inc. 2017
  */
 
 #define _XOPEN_SOURCE	/* strptime proto, but this hides other prototypes */
@@ -920,7 +916,7 @@ print_version_action (GPParams __unused__ *p)
 		  "\n"
 		  "This version of gphoto2 is using the following software versions and options:\n"),
 		VERSION,
-		2016, /* year of release! */
+		2018, /* year of release! */
 		port_message
 		);
 
@@ -952,22 +948,27 @@ _action_camera_capture_preview (GPParams *p, int viewasciiart)
 {
 	CameraFile *file;
 	int	r, fd;
-        char    tmpname[20], *tmpfilename;
-
-	strcpy (tmpname, "tmpfileXXXXXX");
-	fd = mkstemp(tmpname);
-	if (fd == -1) {
-		CR (gp_file_new (&file));
-		tmpfilename = NULL;
+	char tmpname[20], *tmpfilename = NULL;
+	
+	if (p->flags & FLAGS_STDOUT) {
+		fd = dup(fileno(stdout));
 	} else {
-		r = gp_file_new_from_fd (&file, fd);
-		if (r < GP_OK) {
-			close (fd);
-			unlink (tmpname);
-			return r;
+		strcpy (tmpname, "tmpfileXXXXXX");
+		fd = mkstemp(tmpname);
+		if (fd == -1) {
+			CR (gp_file_new (&file));
+			tmpfilename = NULL;
+		} else {
+			r = gp_file_new_from_fd (&file, fd);
+			if (r < GP_OK) {
+				close (fd);
+				unlink (tmpname);
+				return r;
+			}
+			tmpfilename = tmpname;
 		}
-		tmpfilename = tmpname;
 	}
+	CR (gp_file_new_from_fd (&file, fd));
 
 #ifdef HAVE_AA
 	if (viewasciiart)
@@ -975,21 +976,24 @@ _action_camera_capture_preview (GPParams *p, int viewasciiart)
 	else
 #endif
 		r = gp_camera_capture_preview (p->camera, file, p->context);
-
+	fflush(stdout);
 	if (r < 0) {
-		gp_file_unref (file);
+		if(!(p->flags & FLAGS_STDOUT))
+			gp_file_unref (file);
 		unlink (tmpname);
-		return (r);
+		return r;
 	}
 
 	/* name it file_%filename if --filename is set, otherwise capture_preview */
-	r = save_camera_file_to_file (NULL, "capture_preview", p->filename?GP_FILE_TYPE_PREVIEW:GP_FILE_TYPE_NORMAL, file, tmpfilename);
-	gp_file_unref (file);
-	if (r < 0) {
-		unlink (tmpname);
-		return (r);
+	if(!(p->flags & FLAGS_STDOUT)) {
+		r = save_camera_file_to_file (NULL, "capture_preview", p->filename?GP_FILE_TYPE_PREVIEW:GP_FILE_TYPE_NORMAL, file, tmpfilename);
+		gp_file_unref (file);
+		if (r < 0) {
+			unlink (tmpname);
+			return (r);
+		}
 	}
-	return (GP_OK);
+	return GP_OK;
 }
 
 int
@@ -1015,7 +1019,7 @@ action_camera_capture_movie (GPParams *p, const char *arg)
 	int		frames,captured_frames=0;
 	char		*xname;
 	struct timeval	starttime;
-
+	
 	if (p->flags & FLAGS_STDOUT) {
 		fd = dup(fileno(stdout));
 		xname = "stdout";
@@ -1127,7 +1131,7 @@ action_camera_wait_event (GPParams *p, enum download_type downloadtype, const ch
 		} else {
 			wp.type = WAIT_STRING;
 			wp.u.str = arg;
-			printf ( _("Waiting for %s event from camera. Press Ctrl-C to abort.\n"), wp.u.str);
+			printf ( _("Waiting for '%s' event from camera. Press Ctrl-C to abort.\n"), wp.u.str);
 		}
 	}
 
@@ -1215,14 +1219,7 @@ action_camera_wait_event (GPParams *p, enum download_type downloadtype, const ch
 					return (ret);
 				}
 			}
-			//@jonathan added this if/else
-			if(downloadtype == DT_THUMBNAIL){
-				ret = get_file_common (fn->name, GP_FILE_TYPE_PREVIEW);
-			}
-			else{
-				ret = get_file_common (fn->name, GP_FILE_TYPE_NORMAL);
-			}	
-
+			ret = get_file_common (fn->name, GP_FILE_TYPE_NORMAL);
 			if (ret != GP_OK) {
 				cli_error_print (_("Could not get image."));
 				if(ret == GP_ERROR_FILE_NOT_FOUND) {
@@ -1350,6 +1347,9 @@ print_storage_info (GPParams *p)
 		if (sinfos[i].fields & GP_STORAGEINFO_FREESPACEIMAGES)
 			printf ("freeimages=%lu\n", (unsigned long)sinfos[i].freeimages);
 	}
+	if (sinfos)
+		free(sinfos);
+
 	return GP_OK;
 }
 
@@ -1627,7 +1627,7 @@ static int
 print_widget (GPParams *p, const char *name, CameraWidget *widget) {
 	const char *label;
 	CameraWidgetType	type;
-	int ret;
+	int ret, readonly;
 
 	ret = gp_widget_get_type (widget, &type);
 	if (ret != GP_OK)
@@ -1635,8 +1635,13 @@ print_widget (GPParams *p, const char *name, CameraWidget *widget) {
 	ret = gp_widget_get_label (widget, &label);
 	if (ret != GP_OK)
 		return ret;
+		
+	ret = gp_widget_get_readonly (widget, &readonly);
+	if (ret != GP_OK)
+		return ret;
 
 	printf ("Label: %s\n", label); /* "Label:" is not i18ned, the "label" variable is */
+	printf ("Readonly: %d\n", readonly);
 	switch (type) {
 	case GP_WIDGET_TEXT: {		/* char *		*/
 		char *txt;
@@ -1729,6 +1734,8 @@ print_widget (GPParams *p, const char *name, CameraWidget *widget) {
 	case GP_WIDGET_BUTTON:
 		break;
 	}
+	
+	printf ("END\n");
 	return GP_OK;
 }
 
@@ -2074,8 +2081,10 @@ set_config_value_action (GPParams *p, const char *name, const char *value) {
 		int	t = -1;
 		struct tm xtm;
 
+		if (!strcasecmp (value, "now")  || !strcasecmp (value, _("now")))
+			t = time(NULL);
 #ifdef HAVE_STRPTIME
-		if (strptime (value, "%c", &xtm) || strptime (value, "%Ec", &xtm))
+		else if (strptime (value, "%c", &xtm) || strptime (value, "%Ec", &xtm))
 			t = mktime (&xtm);
 #endif
 		if (t == -1) {

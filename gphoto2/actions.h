@@ -18,11 +18,6 @@
  * Boston, MA  02110-1301  USA
  */
 
-
-/*
- * This software was modified by Jonathan Baurer for use by Airscout inc. 2017
- */
-
 #ifndef __ACTIONS_H__
 #define __ACTIONS_H__
 
@@ -37,7 +32,7 @@ enum wait_type {
 	WAIT_FRAMES,
 	WAIT_STRING,
 };
-enum download_type { DT_NO_DOWNLOAD, DT_DOWNLOAD, DT_THUMBNAIL }; //@jonathan added DT_THUMBNAIL
+enum download_type { DT_NO_DOWNLOAD, DT_DOWNLOAD };
 struct waitparams {
 	union {
 		int milliseconds;
